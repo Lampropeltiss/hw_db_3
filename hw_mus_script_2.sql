@@ -25,7 +25,14 @@ WHERE name NOT LIKE '% %' AND name NOT LIKE '%-%';
 -- 5. Название треков, которые содержат слово «мой» или «my»
 SELECT name
 FROM song
-WHERE LOWER(name) LIKE '%мой%' OR LOWER(name) LIKE '%my%';
+WHERE name ILIKE '% my %' 
+OR name ILIKE '% my'
+OR name ILIKE 'my %'
+OR name ILIKE 'my'
+OR name ILIKE '% мой %' 
+OR name ILIKE '% мой'
+OR name ILIKE 'мой %'
+OR name ILIKE 'мой';
 
 
 -- Задание 3
@@ -39,11 +46,10 @@ GROUP BY genre.name
 ORDER BY COUNT(artist);
 
 -- 2. Количество треков, вошедших в альбомы 2019–2020 годов
-SELECT album.name, album.year, COUNT(song) AS song_amount
+SELECT COUNT(song) AS song_amount
 FROM album
 JOIN song ON song.album_id = album.album_id
-WHERE album.year BETWEEN 2019 AND 2020
-GROUP BY album.name, album.year;
+WHERE album.year BETWEEN 2019 AND 2020;
 
 -- 3. Средняя продолжительность треков по каждому альбому
 SELECT album.name, ROUND(AVG(song.duration)) as avg
@@ -53,11 +59,15 @@ GROUP BY album.name
 ORDER BY ROUND(AVG(song.duration));
 
 -- 4. Все исполнители, которые не выпустили альбомы в 2020 году
-SELECT DISTINCT artist.name
-FROM artist_album as aa
-JOIN album ON aa.album_id = album.album_id
-JOIN artist ON aa.artist_id = artist.artist_id
-WHERE album.year != 2020;
+SELECT artist.name
+FROM artist
+WHERE artist.name NOT IN (
+	SELECT artist.name
+	FROM artist_album as aa
+	JOIN album ON aa.album_id = album.album_id
+	JOIN artist ON aa.artist_id = artist.artist_id
+	WHERE album.year = 2020
+);
 
 -- 5. Названия сборников, в которых присутствует конкретный исполнитель
 SELECT DISTINCT c.name
@@ -99,9 +109,14 @@ ORDER BY song.duration;
 
 -- 4. Названия альбомов, содержащих наименьшее количество треков
 SELECT album.name, COUNT(song.name) AS song_amount
-FROM album
+FROM album 
 JOIN song ON album.album_id = song.album_id
 GROUP BY album.name
-HAVING COUNT(song.name) > 2 -- чтобы учитывать только полные в БД альбомы
-ORDER BY song_amount;
+HAVING COUNT(song.name) = (
+	SELECT COUNT(song)
+	FROM album JOIN song ON album.album_id = song.album_id
+	GROUP BY album.name
+	ORDER BY count
+	LIMIT 1
+);
 
